@@ -19,58 +19,14 @@ use Composer\Package\PackageInterface;
  *
  * @author Konstantin Kudryashov <ever.zet@gmail.com>
  */
-class InstallOperation implements OperationInterface
+class InstallOperation extends Operation implements OperationInterface
 {
-    protected $package;
-
-    /**
-     * Initializes operation.
-     *
-     * @param PackageInterface $package package instance
-     */
-    public function __construct(PackageInterface $package)
-    {
-        $this->package = $package;
-    }
-
-    /**
-     * Returns package instance.
-     *
-     * @return PackageInterface
-     */
-    public function getPackage()
-    {
-        return $this->package;
-    }
-
-    /**
-     * Returns operation type.
-     *
-     * @return string
-     */
-    public function getOperationType()
-    {
-        return 'install';
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function show($lock)
-    {
-        return self::format($this->package, $lock);
-    }
+    const TYPE = 'install';
 
     public static function format(PackageInterface $package, $lock = false)
     {
-        return ($lock ? 'Locking ' : 'Installing ').'<info>'.$package->getPrettyName().'</info> (<comment>'.$package->getFullPrettyVersion().'</comment>)';
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function __toString()
-    {
-        return $this->show(false);
+        return ($lock ? 'Locking ' : 'Installing ') .
+            '<info>' . $package->getPrettyName() .
+            '</info> (<comment>'.$package->getFullPrettyVersion().'</comment>)';
     }
 }

@@ -13,16 +13,15 @@
 namespace Composer\DependencyResolver\Operation;
 
 use Composer\Package\AliasPackage;
-use Composer\Package\PackageInterface;
 
 /**
  * Solver install operation.
  *
  * @author Nils Adermann <naderman@naderman.de>
  */
-class MarkAliasInstalledOperation implements OperationInterface
+class MarkAliasInstalledOperation extends Operation implements OperationInterface
 {
-    protected $package;
+    const TYPE = 'markAliasInstalled';
 
     /**
      * Initializes operation.
@@ -31,27 +30,7 @@ class MarkAliasInstalledOperation implements OperationInterface
      */
     public function __construct(AliasPackage $package)
     {
-        $this->package = $package;
-    }
-
-    /**
-     * Returns package instance.
-     *
-     * @return PackageInterface
-     */
-    public function getPackage()
-    {
-        return $this->package;
-    }
-
-    /**
-     * Returns operation type.
-     *
-     * @return string
-     */
-    public function getOperationType()
-    {
-        return 'markAliasInstalled';
+        parent::__construct($package);
     }
 
     /**
@@ -59,14 +38,12 @@ class MarkAliasInstalledOperation implements OperationInterface
      */
     public function show($lock)
     {
-        return 'Marking <info>'.$this->package->getPrettyName().'</info> (<comment>'.$this->package->getFullPrettyVersion().'</comment>) as installed, alias of <info>'.$this->package->getAliasOf()->getPrettyName().'</info> (<comment>'.$this->package->getAliasOf()->getFullPrettyVersion().'</comment>)';
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function __toString()
-    {
-        return $this->show(false);
+        return sprintf(
+            'Marking <info>%s</info> (<comment>%s</comment>) as installed, alias of <info>%s</info> (<comment>%s</comment>)',
+            $this->package->getPrettyName(),
+            $this->package->getFullPrettyVersion(),
+            $this->package->getAliasOf()->getPrettyName(),
+            $this->package->getAliasOf()->getFullPrettyVersion()
+        );
     }
 }

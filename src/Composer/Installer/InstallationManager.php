@@ -238,19 +238,14 @@ class InstallationManager
                 $opType = $operation->getOperationType();
 
                 // ignoring alias ops as they don't need to execute anything at this stage
-                if (!in_array($opType, array('update', 'install', 'uninstall'))) {
+                if (!in_array($opType, array(UpdateOperation::TYPE, InstallOperation::TYPE, UninstallOperation::TYPE))) {
                     continue;
                 }
 
-                if ($opType === 'update') {
-                    $package = $operation->getTargetPackage();
-                    $initialPackage = $operation->getInitialPackage();
-                } else {
-                    $package = $operation->getPackage();
-                    $initialPackage = null;
-                }
-                $installer = $this->getInstaller($package->getType());
 
+                $package = $operation->getPackage();
+                $initialPackage = ($opType === UpdateOperation::TYPE) ? $operation->getInitialPackage() : null;
+                $installer = $this->getInstaller($package->getType());
                 $cleanupPromises[$index] = function () use ($opType, $installer, $package, $initialPackage) {
                     // avoid calling cleanup if the download was not even initialized for a package
                     // as without installation source configured nothing will work
@@ -261,7 +256,7 @@ class InstallationManager
                     return $installer->cleanup($opType, $package, $initialPackage);
                 };
 
-                if ($opType !== 'uninstall') {
+                if ($opType !== UninstallOperation::TYPE) {
                     $promise = $installer->download($package, $initialPackage);
                     if ($promise) {
                         $promises[] = $promise;
@@ -285,9 +280,16 @@ class InstallationManager
             // right order and activated before the packages depending on it are installed
             $batches = array();
             $batch = array();
+
             foreach ($operations as $index => $operation) {
-                if (in_array($operation->getOperationType(), array('update', 'install'), true)) {
-                    $package = $operation->getOperationType() === 'update' ? $operation->getTargetPackage() : $operation->getPackage();
+                if (
+                    in_array(
+                        $operation->getOperationType(),
+                        array(UpdateOperation::TYPE, InstallOperation::TYPE),
+                        true
+                    )
+                ) {
+                    $package = $operation->getPackage();
                     if ($package->getType() === 'composer-plugin' || $package->getType() === 'composer-installer') {
                         if ($batch) {
                             $batches[] = $batch;
@@ -344,7 +346,7 @@ class InstallationManager
             $opType = $operation->getOperationType();
 
             // ignoring alias ops as they don't need to execute anything
-            if (!in_array($opType, array('update', 'install', 'uninstall'))) {
+            if (!in_array($opType, array(UpdateOperation::TYPE, InstallOperation::TYPE, UninstallOperation::TYPE))) {
                 // output alias ops in debug verbosity as they have no output otherwise
                 if ($this->io->isDebug()) {
                     $this->io->writeError('  - ' . $operation->show(false));
@@ -354,13 +356,8 @@ class InstallationManager
                 continue;
             }
 
-            if ($opType === 'update') {
-                $package = $operation->getTargetPackage();
-                $initialPackage = $operation->getInitialPackage();
-            } else {
-                $package = $operation->getPackage();
-                $initialPackage = null;
-            }
+            $package = $operation->getPackage();
+            $initialPackage = ($opType === UpdateOperation::TYPE) ? $operation->getInitialPackage() : null;
             $installer = $this->getInstaller($package->getType());
 
             $event = 'Composer\Installer\PackageEvents::PRE_PACKAGE_'.strtoupper($opType);
@@ -428,13 +425,14 @@ class InstallationManager
     /**
      * Executes update operation.
      *
-     * @param RepositoryInterface $repo      repository in which to check
-     * @param UpdateOperation     $operation operation instance
+     * @param RepositoryInterface $repo repository in which to check
+     * @param UpdateOperation $operation operation instance
+     * @return PromiseInterface|null
      */
     public function update(RepositoryInterface $repo, UpdateOperation $operation)
     {
         $initial = $operation->getInitialPackage();
-        $target = $operation->getTargetPackage();
+        $target = $operation->getPackage();
 
         $initialType = $initial->getType();
         $targetType = $target->getType();

@@ -20,8 +20,10 @@ use Composer\Package\Version\VersionParser;
  *
  * @author Konstantin Kudryashov <ever.zet@gmail.com>
  */
-class UpdateOperation implements OperationInterface
+class UpdateOperation extends Operation implements UpdateOperationInterface, OperationInterface
 {
+    const TYPE = 'update';
+
     protected $initialPackage;
     protected $targetPackage;
 
@@ -34,7 +36,7 @@ class UpdateOperation implements OperationInterface
     public function __construct(PackageInterface $initial, PackageInterface $target)
     {
         $this->initialPackage = $initial;
-        $this->targetPackage = $target;
+        parent::__construct($target);
     }
 
     /**
@@ -45,26 +47,6 @@ class UpdateOperation implements OperationInterface
     public function getInitialPackage()
     {
         return $this->initialPackage;
-    }
-
-    /**
-     * Returns target package.
-     *
-     * @return PackageInterface
-     */
-    public function getTargetPackage()
-    {
-        return $this->targetPackage;
-    }
-
-    /**
-     * Returns operation type.
-     *
-     * @return string
-     */
-    public function getOperationType()
-    {
-        return 'update';
     }
 
     /**
@@ -80,24 +62,32 @@ class UpdateOperation implements OperationInterface
         $fromVersion = $initialPackage->getFullPrettyVersion();
         $toVersion = $targetPackage->getFullPrettyVersion();
 
-        if ($fromVersion === $toVersion && $initialPackage->getSourceReference() !== $targetPackage->getSourceReference()) {
-            $fromVersion = $initialPackage->getFullPrettyVersion(true, PackageInterface::DISPLAY_SOURCE_REF);
-            $toVersion = $targetPackage->getFullPrettyVersion(true, PackageInterface::DISPLAY_SOURCE_REF);
-        } elseif ($fromVersion === $toVersion && $initialPackage->getDistReference() !== $targetPackage->getDistReference()) {
-            $fromVersion = $initialPackage->getFullPrettyVersion(true, PackageInterface::DISPLAY_DIST_REF);
-            $toVersion = $targetPackage->getFullPrettyVersion(true, PackageInterface::DISPLAY_DIST_REF);
+        if ($fromVersion === $toVersion) {
+            $displayMode = null;
+
+            if ($initialPackage->getSourceReference() !== $targetPackage->getSourceReference()) {
+                $displayMode = PackageInterface::DISPLAY_SOURCE_REF;
+            } elseif ($initialPackage->getDistReference() !== $targetPackage->getDistReference()) {
+                $displayMode = PackageInterface::DISPLAY_DIST_REF;
+            }
+
+            if ($displayMode !== null) {
+                $fromVersion = $initialPackage->getFullPrettyVersion(true, $displayMode);
+                $toVersion = $targetPackage->getFullPrettyVersion(true, $displayMode);
+            }
         }
 
-        $actionName = VersionParser::isUpgrade($initialPackage->getVersion(), $targetPackage->getVersion()) ? 'Upgrading' : 'Downgrading';
+        $actionName = VersionParser::isUpgrade(
+            $initialPackage->getVersion(),
+            $targetPackage->getVersion()
+        ) ? 'Upgrading' : 'Downgrading';
 
-        return $actionName.' <info>'.$initialPackage->getPrettyName().'</info> (<comment>'.$fromVersion.'</comment> => <comment>'.$toVersion.'</comment>)';
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function __toString()
-    {
-        return $this->show(false);
+        return sprintf(
+            '%s <info>%s</info> (<comment>%s</comment> => <comment>%s</comment>)',
+            $actionName,
+            $initialPackage->getPrettyName(),
+            $fromVersion,
+            $toVersion
+        );
     }
 }

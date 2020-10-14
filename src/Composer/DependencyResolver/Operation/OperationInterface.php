@@ -12,6 +12,8 @@
 
 namespace Composer\DependencyResolver\Operation;
 
+use Composer\Package\PackageInterface;
+
 /**
  * Solver operation interface.
  *
@@ -33,6 +35,13 @@ interface OperationInterface
      * @return string
      */
     public function show($lock);
+
+    /**
+     * Returns package instance.
+     *
+     * @return PackageInterface
+     */
+    public function getPackage();
 
     /**
      * Serializes the operation in a human readable format
